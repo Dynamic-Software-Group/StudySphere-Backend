@@ -4,10 +4,10 @@ import dev.dynamic.studysphere.endpoints.ratelimit.WithRateLimitProtection;
 import dev.dynamic.studysphere.entities.Role;
 import dev.dynamic.studysphere.entities.User;
 import dev.dynamic.studysphere.entities.UserRepository;
-import dev.dynamic.studysphere.sercurity.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,12 +20,9 @@ public class RegisterEndpoint {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private AuthService authService;
 
     @PostMapping
     public ResponseEntity<Response> register(@RequestBody final String username, @RequestBody final String password, @RequestBody final String email) {
-
         // Check if user already exists
         if (userRepository.existsByUsername(username)) {
             return ResponseEntity.badRequest().body(new Response(400, "User already exists"));
@@ -40,6 +37,7 @@ public class RegisterEndpoint {
 
         String encodedPassword = encoder.encode(password);
 
+
         User user = new User();
         // Random ID
         user.setId((long) (Math.random() * 1000000));
@@ -50,9 +48,7 @@ public class RegisterEndpoint {
 
         userRepository.save(user);
 
-        String jwt = authService.createJWT(username);
-
-        return ResponseEntity.ok(new Response(200, "User registered successfully " + jwt));
+        return ResponseEntity.ok(new Response(200, "User registered successfully"));
     }
 
 }

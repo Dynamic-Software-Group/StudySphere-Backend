@@ -4,7 +4,6 @@ import dev.dynamic.studysphere.StudysphereApplication;
 import dev.dynamic.studysphere.endpoints.ratelimit.WithRateLimitProtection;
 import dev.dynamic.studysphere.entities.User;
 import dev.dynamic.studysphere.entities.UserRepository;
-import dev.dynamic.studysphere.sercurity.AuthService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,9 +23,6 @@ public class LoginEndpoint {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private AuthService authService;
-
     @PostMapping
     @WithRateLimitProtection
     public ResponseEntity<Response> login(@RequestBody final String username, @RequestBody final String password) {
@@ -41,8 +37,7 @@ public class LoginEndpoint {
             return ResponseEntity.badRequest().body(new Response(403, "Incorrect password"));
         }
 
-        String jwt = authService.createJWT(username);
 
-        return ResponseEntity.ok(new Response(200, jwt));
+        return ResponseEntity.ok(new Response(200, "ok"));
     }
 }
