@@ -1,4 +1,4 @@
-package dev.dynamic.studysphere.entities;
+package dev.dynamic.studysphere.model;
 
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;

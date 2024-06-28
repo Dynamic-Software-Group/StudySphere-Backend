@@ -1,4 +1,4 @@
-package dev.dynamic.studysphere.endpoints;
+package dev.dynamic.studysphere.endpoints.responses;
 
 import lombok.Data;
 
