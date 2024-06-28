@@ -33,32 +33,34 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         Map<String, Object> errorDetails = new HashMap<>();
 
-        System.out.println("Filtering request : "+request);
         System.out.println(this.shouldNotFilter(request));
         if (this.shouldNotFilter(request)) {
             filterChain.doFilter(request, response);
             return;
         }
 
+        System.out.println("Filtering request : "+request);
         try {
             String accessToken = jwtUtil.resolveToken(request);
-            if (accessToken == null ) {
-                filterChain.doFilter(request, response);
+            System.out.println(accessToken);
+
+            if (accessToken == null || !jwtUtil.validToken(accessToken)) {
+                response.setStatus(HttpStatus.FORBIDDEN.value());
                 return;
             }
+
             Claims claims = jwtUtil.resolveClaims(request);
 
             if (claims != null & jwtUtil.validateClaims(claims)){
                 String email = claims.getSubject();
                 Authentication authentication =
-                        new UsernamePasswordAuthenticationToken(email,"",new ArrayList<>());
+                        new UsernamePasswordAuthenticationToken(email,"", new ArrayList<>());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-
         } catch (Exception e) {
             errorDetails.put("message", "Authentication Error");
             errorDetails.put("details",e.getMessage());
-            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+            response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 
             mapper.writeValue(response.getWriter(), errorDetails);
@@ -68,7 +70,6 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        System.out.println("Request path : "+request.getServletPath());
         return request.getServletPath().startsWith("/api/v1/auth");
     }
 

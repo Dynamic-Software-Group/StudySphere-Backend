@@ -9,6 +9,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
+import java.util.Map;
 
 @Component
 public class JwtUtil {
@@ -26,17 +27,19 @@ public class JwtUtil {
     }
 
     public String createToken(User user) {
-        Claims claims = Jwts.claims().setSubject(user.getEmail()).build();
-        claims.put("username", user.getUsername());
-        claims.put("email", user.getEmail());
-        claims.put("roles", user.getRole());
+        Map<String, Object> claimsMap = Map.of(
+                "roles", user.getRole(),
+                "email", user.getEmail(),
+                "username", user.getUsername()
+        );
+
         Date now = new Date();
         Date validity = new Date(now.getTime() + expiration);
         return Jwts.builder()
-                .setClaims(claims)
+                .setClaims(claimsMap)
                 .setIssuedAt(now)
                 .setExpiration(validity)
-                .signWith(SignatureAlgorithm.RS256, secret)
+                .signWith(SignatureAlgorithm.HS256, secret)
                 .compact();
     }
 
@@ -66,6 +69,15 @@ public class JwtUtil {
             return bearerToken.substring(TOKEN_PREFIX.length());
         }
         return null;
+    }
+
+    public boolean validToken(String token) {
+        try {
+            Claims claims = jwtParser.parseClaimsJws(token).getBody();
+            return validateClaims(claims);
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
     }
 
     public boolean validateClaims(Claims claims) throws AuthenticationException {
