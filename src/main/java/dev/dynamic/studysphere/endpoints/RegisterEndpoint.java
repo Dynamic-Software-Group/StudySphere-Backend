@@ -1,12 +1,10 @@
 package dev.dynamic.studysphere.endpoints;
 
-import dev.dynamic.studysphere.StudysphereApplication;
 import dev.dynamic.studysphere.endpoints.ratelimit.WithRateLimitProtection;
 import dev.dynamic.studysphere.entities.Role;
 import dev.dynamic.studysphere.entities.User;
 import dev.dynamic.studysphere.entities.UserRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import dev.dynamic.studysphere.sercurity.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
@@ -15,17 +13,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Date;
-
 @RestController
-@RequestMapping("/api/v1/register")
+@RequestMapping("/register")
 public class RegisterEndpoint {
 
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AuthService authService;
+
     @PostMapping
-    @WithRateLimitProtection
     public ResponseEntity<Response> register(@RequestBody final String username, @RequestBody final String password, @RequestBody final String email) {
 
         // Check if user already exists
@@ -50,14 +48,11 @@ public class RegisterEndpoint {
         user.setEmail(email);
         user.setRole(Role.USER);
 
-        String jwt = Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 604800000)) // 7 days
-                .signWith(SignatureAlgorithm.RS256, StudysphereApplication.dotenv.get("JWT_SECRET"))
-                .compact();
+        userRepository.save(user);
 
-        return ResponseEntity.ok(new Response(200, "User registered successfully" + jwt));
+        String jwt = authService.createJWT(username);
+
+        return ResponseEntity.ok(new Response(200, "User registered successfully " + jwt));
     }
 
 }

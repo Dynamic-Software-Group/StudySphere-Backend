@@ -1,22 +1,21 @@
 package dev.dynamic.studysphere.entities;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.Data;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.couchbase.core.mapping.Document;
-import org.springframework.data.couchbase.core.mapping.Field;
+import lombok.Getter;
 
 @Data
-@Document
+@Entity
+@Getter
 public class User {
     @Id
-    @Field
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Field
     private String username;
-    @Field
     private String password;
-    @Field
     private String email;
-    @Field
     private Role role;
 }
