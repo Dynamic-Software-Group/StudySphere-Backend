@@ -1,5 +1,6 @@
 package dev.dynamic.studysphere.storage;
 
+import dev.dynamic.studysphere.StudysphereApplication;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.couchbase.config.AbstractCouchbaseConfiguration;
 import org.springframework.data.couchbase.repository.config.EnableCouchbaseRepositories;
@@ -10,17 +11,17 @@ public class CouchbaseConfig extends AbstractCouchbaseConfiguration {
 
     @Override
     public String getConnectionString() {
-        return "https://data.polarix.host/";
+        return "data.polarix.host";
     }
 
     @Override
     public String getUserName() {
-        return "";
+        return StudysphereApplication.dotenv.get("COUCHBASE_USERNAME");
     }
 
     @Override
     public String getPassword() {
-        return "";
+        return StudysphereApplication.dotenv.get("COUCHBASE_PASSWORD");
     }
 
     @Override
