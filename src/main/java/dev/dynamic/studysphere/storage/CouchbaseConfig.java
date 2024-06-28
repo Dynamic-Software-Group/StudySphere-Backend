@@ -1,8 +1,11 @@
 package dev.dynamic.studysphere.storage;
 
 import dev.dynamic.studysphere.StudysphereApplication;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.convert.CustomConversions;
 import org.springframework.data.couchbase.config.AbstractCouchbaseConfiguration;
+import org.springframework.data.couchbase.repository.config.CouchbaseRepositoriesRegistrar;
 import org.springframework.data.couchbase.repository.config.EnableCouchbaseRepositories;
 
 @Configuration
@@ -11,7 +14,7 @@ public class CouchbaseConfig extends AbstractCouchbaseConfiguration {
 
     @Override
     public String getConnectionString() {
-        return "data.polarix.host";
+        return "couchbase://185.240.134.120:11210";
     }
 
     @Override
@@ -28,4 +31,20 @@ public class CouchbaseConfig extends AbstractCouchbaseConfiguration {
     public String getBucketName() {
         return "study_sphere";
     }
+
+    @Bean
+    public CustomConversions customConversions() {
+        return super.customConversions();
+    }
+
+    @Bean
+    public CustomConversions couchbaseCustomConversions() {
+        return super.customConversions();
+    }
+
+    @Bean
+    public CouchbaseRepositoriesRegistrar couchbaseRepositoryRegistrar() {
+        return new CouchbaseRepositoriesRegistrar();
+    }
+
 }
