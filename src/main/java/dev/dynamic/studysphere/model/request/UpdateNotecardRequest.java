@@ -10,5 +10,5 @@ public class UpdateNotecardRequest {
     private String name;
     private String content;
     private String category;
-    private String email;
+    private String token;
 }

@@ -1,9 +1,6 @@
 package dev.dynamic.studysphere;
 
-import dev.dynamic.studysphere.model.NotecardRepository;
-import dev.dynamic.studysphere.realtime.WebsocketServer;
 import io.github.cdimascio.dotenv.Dotenv;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;

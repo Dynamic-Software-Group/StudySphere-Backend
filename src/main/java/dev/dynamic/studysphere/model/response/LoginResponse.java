@@ -9,9 +9,6 @@ public class LoginResponse {
 
     @Override
     public String toString() {
-        return "{" +
-                "   email='" + email + '\'' +
-                "   , token='" + token + '\'' +
-                '}';
+        return STR."{   'email':'\{email}\{'\''}   , 'token':'\{token}\{'\''}\{'}'}";
     }
 }

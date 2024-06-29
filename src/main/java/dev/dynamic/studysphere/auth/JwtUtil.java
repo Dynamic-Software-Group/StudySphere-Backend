@@ -88,6 +88,10 @@ public class JwtUtil {
         return claims.getSubject();
     }
 
+    public String getEmail(String token) {
+        return getEmail(parseJwtClaims(token));
+    }
+
     private Role getRoles(Claims claims) {
         return (Role) claims.get("roles");
     }

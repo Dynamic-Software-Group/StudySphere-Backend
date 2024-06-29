@@ -8,5 +8,5 @@ import lombok.Getter;
 public class CreateNotecardRequest {
     private String name;
     private String category;
-    private String email;
+    private String token;
 }

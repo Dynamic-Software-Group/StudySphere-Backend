@@ -7,5 +7,5 @@ import lombok.Getter;
 @Getter
 public class FavoriteNotecardRequest {
     private String notecardId;
-    private String email;
+    private String token;
 }

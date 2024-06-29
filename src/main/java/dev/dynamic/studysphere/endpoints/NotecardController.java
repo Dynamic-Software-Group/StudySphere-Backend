@@ -1,9 +1,11 @@
 package dev.dynamic.studysphere.endpoints;
 
+import dev.dynamic.studysphere.auth.JwtUtil;
 import dev.dynamic.studysphere.model.*;
 import dev.dynamic.studysphere.model.request.CreateNotecardRequest;
 import dev.dynamic.studysphere.model.request.FavoriteNotecardRequest;
 import dev.dynamic.studysphere.model.request.UpdateNotecardRequest;
+import dev.dynamic.studysphere.model.request.YJSUpdateRequest;
 import dev.dynamic.studysphere.model.response.CreateNotecardResponse;
 import dev.dynamic.studysphere.model.response.GetNotecardsResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,9 @@ public class NotecardController {
     private UserRepository userRepository;
 
     @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
     private NotecardCategoryRepository categoryRepository;
 
     @Autowired
@@ -29,7 +34,7 @@ public class NotecardController {
 
     @PostMapping(value = "/create", consumes = "application/json", produces = "application/json")
     public ResponseEntity createNotecard(@RequestBody CreateNotecardRequest request) {
-        String email = request.getEmail();
+        String email = jwtUtil.getEmail(request.getToken());
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
@@ -39,7 +44,7 @@ public class NotecardController {
         String category = request.getCategory();
 
         if (categoryRepository.findByNameAndOwner(category, user) == null) {
-            return ResponseEntity.status(401).body("Category not found");
+            return ResponseEntity.status(404).body("Category not found");
         }
 
         NotecardCategory notecardCategory = categoryRepository.findByNameAndOwner(category, user);
@@ -59,14 +64,14 @@ public class NotecardController {
 
     @PostMapping(value = "/favorite", consumes = "application/json", produces = "application/json")
     public ResponseEntity favoriteNotecard(@RequestBody FavoriteNotecardRequest request) {
-        String email = request.getEmail();
+        String email = jwtUtil.getEmail(request.getToken());
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
         User user = userRepository.findByEmail(email).get();
         String notecardId = request.getNotecardId();
         if (notecardRepository.findById(Long.parseLong(notecardId)).isEmpty()) {
-            return ResponseEntity.status(401).body("Notecard not found");
+            return ResponseEntity.status(404).body("Notecard not found");
         }
         Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).get();
         user.getFavoriteNotecards().add(notecard);
@@ -76,7 +81,8 @@ public class NotecardController {
     // List methods
 
     @GetMapping(value = "/list", produces = "application/json")
-    public ResponseEntity getNotecards(@RequestParam String email) {
+    public ResponseEntity getNotecards(@RequestParam String token) {
+        String email = jwtUtil.getEmail(token);
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
@@ -86,12 +92,13 @@ public class NotecardController {
     }
 
     @GetMapping(value = "/list_category", produces = "application/json")
-    public ResponseEntity getNotecardsByCategory(@RequestParam String email, @RequestParam String category) {
+    public ResponseEntity getNotecardsByCategory(@RequestParam String token, @RequestParam String category) {
+        String email = jwtUtil.getEmail(token);
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
         if (categoryRepository.findByNameAndOwner(category, userRepository.findByEmail(email).get()) == null) {
-            return ResponseEntity.status(401).body("Category not found");
+            return ResponseEntity.status(404).body("Category not found");
         }
         User user = userRepository.findByEmail(email).get();
         NotecardCategory notecardCategory = categoryRepository.findByNameAndOwner(category, user);
@@ -100,7 +107,8 @@ public class NotecardController {
     }
 
     @GetMapping(value = "/favorites", produces = "application/json")
-    public ResponseEntity getFavorites(@RequestParam String email) {
+    public ResponseEntity getFavorites(@RequestParam String token) {
+        String email = jwtUtil.getEmail(token);
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
@@ -113,14 +121,14 @@ public class NotecardController {
 
     @PatchMapping(value = "/update", consumes = "application/json", produces = "application/json")
     public ResponseEntity updateNotecard(@RequestBody UpdateNotecardRequest request) {
-        String email = request.getEmail();
+        String email = jwtUtil.getEmail(request.getToken());
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
         User user = userRepository.findByEmail(email).get();
         String notecardId = request.getNotecardId();
         if (notecardRepository.findById(Long.parseLong(notecardId)).isEmpty()) {
-            return ResponseEntity.status(401).body("Notecard not found");
+            return ResponseEntity.status(404).body("Notecard not found");
         }
         Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).get();
         if (!notecard.getOwner().equals(user)) {
@@ -142,13 +150,14 @@ public class NotecardController {
     // Deleting methods
 
     @DeleteMapping(value = "/delete", produces = "application/json")
-    public ResponseEntity deleteNotecard(@RequestParam String email, @RequestParam String notecardId) {
+    public ResponseEntity deleteNotecard(@RequestParam String token, @RequestParam String notecardId) {
+        String email = jwtUtil.getEmail(token);
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
         User user = userRepository.findByEmail(email).get();
         if (notecardRepository.findById(Long.parseLong(notecardId)).isEmpty()) {
-            return ResponseEntity.status(401).body("Notecard not found");
+            return ResponseEntity.status(404).body("Notecard not found");
         }
         Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).get();
         if (!notecard.getOwner().equals(user)) {
@@ -160,13 +169,14 @@ public class NotecardController {
     }
 
     @DeleteMapping(value = "/delete_category", produces = "application/json")
-    public ResponseEntity deleteCategory(@RequestParam String email, @RequestParam String category) {
+    public ResponseEntity deleteCategory(@RequestParam String token, @RequestParam String category) {
+        String email = jwtUtil.getEmail(token);
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
         User user = userRepository.findByEmail(email).get();
         if (categoryRepository.findByNameAndOwner(category, user) == null) {
-            return ResponseEntity.status(401).body("Category not found");
+            return ResponseEntity.status(404).body("Category not found");
         }
         NotecardCategory notecardCategory = categoryRepository.findByNameAndOwner(category, user);
         Set<Notecard> notecards = notecardRepository.findByCategoryAndOwnerAndDeletedFalse(notecardCategory, user);
@@ -176,6 +186,29 @@ public class NotecardController {
         }
         categoryRepository.delete(notecardCategory);
         return ResponseEntity.ok("Category deleted");
+    }
+
+    // Allow for Y-JS
+    // Assuming that the json payload is formatted correctly, this is pinged every 2 seconds from the external websocket server
+
+    @PostMapping(value = "/update_content", consumes = "application/json", produces = "application/json")
+    public ResponseEntity updateContent(@RequestBody YJSUpdateRequest request) {
+        String email = jwtUtil.getEmail(request.getToken());
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        String notecardId = request.getNotecardId();
+        if (notecardRepository.findById(Long.parseLong(notecardId)).isEmpty()) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+        Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).get();
+        if (!notecard.getOwner().equals(user)) {
+            return ResponseEntity.status(401).body("Notecard not owned by user");
+        }
+        notecard.setContent(request.getContent());
+        notecardRepository.save(notecard);
+        return ResponseEntity.ok("Notecard content updated");
     }
 
 }
