@@ -41,7 +41,10 @@ public class NotecardController {
         String category = request.getCategory();
 
         if (categoryRepository.findByNameAndOwner(category, user) == null) {
-            return ResponseEntity.status(404).body("Category not found");
+            NotecardCategory notecardCategory = new NotecardCategory();
+            notecardCategory.setName(category);
+            notecardCategory.setOwner(user);
+            categoryRepository.save(notecardCategory);
         }
 
         NotecardCategory notecardCategory = categoryRepository.findByNameAndOwner(category, user);
@@ -82,7 +85,7 @@ public class NotecardController {
         String email = jwtUtil.getEmail(token);
 
         if (userRepository.findByEmail(email).isEmpty()) {
-            return ResponseEntity.status(401).body("User not found" + email);
+            return ResponseEntity.status(401).body("User not found");
         }
         User user = userRepository.findByEmail(email).get();
         GetNotecardsResponse response = new GetNotecardsResponse(notecardRepository.findByOwnerAndDeletedFalse(user));
@@ -186,6 +189,26 @@ public class NotecardController {
         return ResponseEntity.ok("Category deleted");
     }
 
+    @PostMapping(value = "/create_category", consumes = "application/json", produces = "application/json")
+    public ResponseEntity createCategory(@RequestBody CreateCategoryRequest request) {
+        String email = jwtUtil.getEmail(request.getToken());
+
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+
+        User user = userRepository.findByEmail(email).get();
+        if (categoryRepository.findByNameAndOwner(request.getName(), user) != null) {
+            return ResponseEntity.status(409).body("Category already exists");
+        }
+
+        NotecardCategory category = new NotecardCategory();
+        category.setName(request.getName());
+        category.setOwner(user);
+        categoryRepository.save(category);
+        return ResponseEntity.ok("Category created");
+    }
+
     // Allow for Y-JS
     // Assuming that the json payload is formatted correctly, this is pinged every 2 seconds from the external websocket server
 
@@ -220,6 +243,6 @@ public class NotecardController {
             return ResponseEntity.status(401).body("Notecard not owned by user");
         }
 
-        return ResponseEntity.ok(notecard);
+        return ResponseEntity.ok(notecard.toString());
     }
 }
