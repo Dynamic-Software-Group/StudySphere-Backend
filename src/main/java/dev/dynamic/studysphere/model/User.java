@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Data
 @Entity
 @Getter
@@ -21,4 +24,18 @@ public class User {
     private String email;
     @Column
     private Role role;
+    @ManyToMany
+    @JoinTable(
+            name = "favorite_notecards",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "notecard_id")
+    )
+    private Set<Notecard> favoriteNotecards = new HashSet<>();
+    @ManyToMany
+    @JoinTable(
+            name = "user_categories",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<NotecardCategory> categories = new HashSet<>();
 }

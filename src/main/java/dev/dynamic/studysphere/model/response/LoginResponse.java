@@ -10,8 +10,8 @@ public class LoginResponse {
     @Override
     public String toString() {
         return "{" +
-                "email='" + email + '\'' +
-                ", token='" + token + '\'' +
+                "   email='" + email + '\'' +
+                "   , token='" + token + '\'' +
                 '}';
     }
 }
