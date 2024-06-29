@@ -5,7 +5,12 @@ import dev.dynamic.studysphere.model.*;
 import dev.dynamic.studysphere.model.request.*;
 import dev.dynamic.studysphere.model.response.CreateNotecardResponse;
 import dev.dynamic.studysphere.model.response.GetNotecardsResponse;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +32,21 @@ public class NotecardController {
 
     @Autowired
     private NotecardRepository notecardRepository;
+
+    private final OpenAiChatModel chatModel;
+
+    @Value("${spring.ai.openai.api-key}")
+    private String apiKey;
+
+    public NotecardController() {
+        OpenAiApi openAi = new OpenAiApi(apiKey);
+        OpenAiChatOptions openAiChatOptions = OpenAiChatOptions.builder()
+                .withModel("gpt-3.5-turbo")
+                .withTemperature(0.5F)
+                .build();
+
+        chatModel = new OpenAiChatModel(openAi, openAiChatOptions);
+    }
 
     // Create method
 
@@ -247,4 +267,29 @@ public class NotecardController {
 
         return ResponseEntity.ok(notecard.toString());
     }
+
+    // Summarize
+
+    // Require notecard contents because normal content is encoded in YJS format
+    @GetMapping("/summarize")
+    public ResponseEntity summarize(@RequestParam String token, @RequestParam String notecardContents) {
+        String email = jwtUtil.getEmail(token);
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+
+        if (user.getApiQuota() > 5) {
+            return ResponseEntity.status(429).body("API quota exceeded");
+        }
+
+        user.setApiQuota(user.getApiQuota() + 1);
+        userRepository.save(user);
+
+        String response = chatModel.call(STR."""
+        Please summarize the following notecard in a concise paragraph, focusing on the main ideas related to the notecard. Highlight the key points and ensure the summary is easy to understand. Here is the content you need to summarize:\s
+        \{notecardContents}""");
+        return ResponseEntity.ok(response);
+    }
+
 }

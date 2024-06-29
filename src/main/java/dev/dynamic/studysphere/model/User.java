@@ -40,4 +40,6 @@ public class User {
     private Set<NotecardCategory> categories = new HashSet<>();
     @Column
     private String base64Avatar;
+    @Column
+    private int apiQuota = 0;
 }
