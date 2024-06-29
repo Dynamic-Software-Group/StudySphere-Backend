@@ -17,4 +17,5 @@ public interface NotecardRepository extends JpaRepository<Notecard, Long> {
     Set<Notecard> findByOwnerAndDeletedTrue(User owner);
     Set<Notecard> findByOwnerAndCategoryIsNullAndDeletedFalse(User owner);
     Optional<Notecard> findById(UUID id);
+    Set<Notecard> findByDeletedTrue();
 }

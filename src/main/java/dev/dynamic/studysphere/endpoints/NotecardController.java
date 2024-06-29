@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @RestController
@@ -165,6 +166,7 @@ public class NotecardController {
             return ResponseEntity.status(401).body("Notecard not owned by user");
         }
         notecard.setDeleted(true);
+        notecard.setScheduledDeletionTime(LocalDateTime.now().plusDays(30));
         notecardRepository.save(notecard);
         return ResponseEntity.ok("Notecard deleted");
     }
