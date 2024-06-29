@@ -29,10 +29,15 @@ public class RemoveExpiredNotecards {
                         }
                     }
 
-                    Thread.sleep(30000);
                 } catch (Exception e) {
                     System.err.println(STR."Failed to delete expired notecards: \{e.getMessage()}");
                 }
+                try {
+                    Thread.sleep(30000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
             }
         }).start();
     }
