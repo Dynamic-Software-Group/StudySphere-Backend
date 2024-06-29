@@ -10,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Data
@@ -19,7 +20,7 @@ import java.util.Set;
 public class Notecard {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private Long id;
+    private UUID id;
     @Column
     private String name;
     @Column
@@ -28,7 +29,6 @@ public class Notecard {
     @Column
     @CreatedDate
     private LocalDateTime created;
-    @Column
     @OneToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User owner;
@@ -44,4 +44,6 @@ public class Notecard {
     @ManyToOne
     @JoinColumn(name = "category_id", referencedColumnName = "id")
     private NotecardCategory category;
+    @Column
+    private boolean deleted = false;
 }

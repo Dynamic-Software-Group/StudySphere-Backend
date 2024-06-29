@@ -5,11 +5,13 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Data
 @Getter
 @Setter
 @AllArgsConstructor
 public class CreateNotecardResponse {
-    private long id;
+    private UUID id;
     private String name;
 }

@@ -7,8 +7,11 @@ import java.util.Set;
 
 @Repository
 public interface NotecardRepository extends JpaRepository<Notecard, Long> {
-    Set<Notecard> findByOwner(User owner);
-    Set<Notecard> findByCollaborators(Set<User> collaborators);
-    Set<Notecard> findByCollaboratorsContains(User collaborator);
-    Set<Notecard> findByCategory(NotecardCategory category);
+    Set<Notecard> findByOwnerAndDeletedFalse(User owner);
+    Set<Notecard> findByCollaboratorsAndDeletedFalse(Set<User> collaborators);
+    Set<Notecard> findByCollaboratorsContainsAndDeletedFalse(User collaborator);
+    Set<Notecard> findByCategoryAndDeletedFalse(NotecardCategory category);
+    Set<Notecard> findByCategoryAndOwnerAndDeletedFalse(NotecardCategory category, User owner);
+    Set<Notecard> findByOwnerAndDeletedTrue(User owner);
+    Set<Notecard> findByOwnerAndCategoryIsNullAndDeletedFalse(User owner);
 }
