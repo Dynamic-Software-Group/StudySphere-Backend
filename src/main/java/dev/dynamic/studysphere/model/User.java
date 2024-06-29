@@ -38,4 +38,6 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "category_id")
     )
     private Set<NotecardCategory> categories = new HashSet<>();
+    @Column
+    private String base64Avatar;
 }
