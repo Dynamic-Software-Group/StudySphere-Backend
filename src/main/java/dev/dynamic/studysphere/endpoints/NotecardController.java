@@ -2,10 +2,7 @@ package dev.dynamic.studysphere.endpoints;
 
 import dev.dynamic.studysphere.auth.JwtUtil;
 import dev.dynamic.studysphere.model.*;
-import dev.dynamic.studysphere.model.request.CreateNotecardRequest;
-import dev.dynamic.studysphere.model.request.FavoriteNotecardRequest;
-import dev.dynamic.studysphere.model.request.UpdateNotecardRequest;
-import dev.dynamic.studysphere.model.request.YJSUpdateRequest;
+import dev.dynamic.studysphere.model.request.*;
 import dev.dynamic.studysphere.model.response.CreateNotecardResponse;
 import dev.dynamic.studysphere.model.response.GetNotecardsResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +42,10 @@ public class NotecardController {
         String category = request.getCategory();
 
         if (categoryRepository.findByNameAndOwner(category, user) == null) {
-            return ResponseEntity.status(404).body("Category not found");
+            NotecardCategory notecardCategory = new NotecardCategory();
+            notecardCategory.setName(category);
+            notecardCategory.setOwner(user);
+            categoryRepository.save(notecardCategory);
         }
 
         NotecardCategory notecardCategory = categoryRepository.findByNameAndOwner(category, user);
@@ -84,6 +84,7 @@ public class NotecardController {
     @GetMapping(value = "/list", produces = "application/json")
     public ResponseEntity getNotecards(@RequestParam String token) {
         String email = jwtUtil.getEmail(token);
+
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
@@ -190,6 +191,26 @@ public class NotecardController {
         return ResponseEntity.ok("Category deleted");
     }
 
+    @PostMapping(value = "/create_category", consumes = "application/json", produces = "application/json")
+    public ResponseEntity createCategory(@RequestBody CreateCategoryRequest request) {
+        String email = jwtUtil.getEmail(request.getToken());
+
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+
+        User user = userRepository.findByEmail(email).get();
+        if (categoryRepository.findByNameAndOwner(request.getName(), user) != null) {
+            return ResponseEntity.status(409).body("Category already exists");
+        }
+
+        NotecardCategory category = new NotecardCategory();
+        category.setName(request.getName());
+        category.setOwner(user);
+        categoryRepository.save(category);
+        return ResponseEntity.ok("Category created");
+    }
+
     // Allow for Y-JS
     // Assuming that the json payload is formatted correctly, this is pinged every 2 seconds from the external websocket server
 
@@ -213,4 +234,17 @@ public class NotecardController {
         return ResponseEntity.ok("Notecard content updated");
     }
 
+    @GetMapping(value = "/get", consumes = "application/json", produces = "application/json")
+    public ResponseEntity getNotecard(@RequestBody GetNotecardRequest request) {
+        if (notecardRepository.findById(request.getId()).isEmpty()) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+
+        Notecard notecard = notecardRepository.findById(request.getId()).get();
+        if (!notecard.getOwner().getEmail().equals(jwtUtil.getEmail(request.getToken()))) {
+            return ResponseEntity.status(401).body("Notecard not owned by user");
+        }
+
+        return ResponseEntity.ok(notecard.toString());
+    }
 }

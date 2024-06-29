@@ -1,5 +1,6 @@
 package dev.dynamic.studysphere.model;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
@@ -49,4 +50,14 @@ public class Notecard {
     private boolean deleted = false;
     @Column
     private LocalDateTime scheduledDeletionTime;
+
+    @Override
+    public String toString() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            return objectMapper.writeValueAsString(this);
+        } catch (Exception e) {
+            return super.toString();
+        }
+    }
 }
