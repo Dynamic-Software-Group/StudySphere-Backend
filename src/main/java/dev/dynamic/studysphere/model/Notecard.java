@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import org.checkerframework.checker.units.qual.C;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -46,4 +47,6 @@ public class Notecard {
     private NotecardCategory category;
     @Column
     private boolean deleted = false;
+    @Column
+    private LocalDateTime scheduledDeletionTime;
 }
