@@ -18,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -59,7 +60,7 @@ public class AuthController {
             String token = jwtUtil.createToken(user);
             LoginResponse loginResponse = new LoginResponse(user.getEmail(), token);
             return ResponseEntity.ok(loginResponse.toString());
-        } catch (BadCredentialsException e) {
+        } catch (BadCredentialsException | NoSuchElementException e) {
             return ResponseEntity.status(403).body(new ErrorResponse(HttpStatus.FORBIDDEN, "Invalid username or bad password"));
         } catch (Exception e) {
             return ResponseEntity.status(400).body(new ErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage()));
