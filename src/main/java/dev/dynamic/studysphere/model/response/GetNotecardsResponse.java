@@ -13,7 +13,7 @@ public class GetNotecardsResponse {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("{");
-        sb.append("   notecards=");
+        sb.append("notecards=");
         sb.append("[");
         for (Notecard notecard : notecards) {
             sb.append(notecard.toString());
