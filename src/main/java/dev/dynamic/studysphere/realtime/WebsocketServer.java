@@ -3,9 +3,8 @@ package dev.dynamic.studysphere.realtime;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import crdt.sets.GSet;
-import crdt.sets.ORSet;
 import crdt.sets.TwoPSet;
+import dev.dynamic.studysphere.auth.JwtUtil;
 import dev.dynamic.studysphere.model.NotecardRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,40 +15,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.util.*;
 
 @Service
 public class WebsocketServer extends WebSocketServer {
 
-    @Autowired
-    public NotecardRepository notecardRepository;
+    private final NotecardRepository notecardRepository;
+    private final JwtUtil jwtUtil;
 
     final Map<String, List<WebsocketClient>> clients = new HashMap<>();
     final Map<String, TwoPSet<String>> notecardContent = new HashMap<>(); // Master document
     final Map<String, List<TextChange>> pendingUpdates = new HashMap<>();
 
-    public WebsocketServer() {
-        int startPort = 49152;
-        int endPort = 65535;
-        for (int port = startPort; port <= endPort; port++) {
-            try {
-                ServerSocket serverSocket = new ServerSocket(port);
-                System.out.println("Websocket server started on port " + port);
-                break;
-            } catch (Exception e) {
-                if (port == endPort) {
-                    throw new RuntimeException("No available ports");
-                }
-            }
-        }
+    public WebsocketServer(NotecardRepository notecardRepository, JwtUtil jwtUtil) {
         super(new InetSocketAddress(59101));
+        this.notecardRepository = notecardRepository;
+        this.jwtUtil = jwtUtil;
         start();
-        WebsocketRunnable runnable = new WebsocketRunnable(this);
-        new Thread(runnable).start();
+        new Thread(new WebsocketRunnable(this)).start();
     }
 
-    private Logger logger = LogManager.getLogger();
+    private final Logger logger = LogManager.getLogger();
 
     public static class WebsocketRunnable implements Runnable {
 
@@ -106,11 +92,45 @@ public class WebsocketServer extends WebSocketServer {
     @Override
     public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
         logger.info("New connection: {}", webSocket.getRemoteSocketAddress());
+        webSocket.send("Connection established");
+        // check if they have auth header
+        String auth = clientHandshake.getFieldValue("Authorization");
+
+        logger.info("Auth: {}", auth);
+
+        if (auth == null) {
+            webSocket.send("Unauthorized");
+            webSocket.close();
+            return;
+        }
+
+        if (!auth.contains("Bearer")) {
+            webSocket.send("Invalid auth format");
+            webSocket.close();
+            return;
+        }
+
+        String token = auth.split(" ")[1];
+
+        // check if token is valid
+
+        logger.info("Token: {}", token);
+
+        if (!jwtUtil.validToken(token)) {
+            webSocket.send("Invalid token");
+            webSocket.close();
+            return;
+        }
+
+        webSocket.send("Authorized");
     }
 
     @Override
     public void onClose(WebSocket webSocket, int code, String reason, boolean remote) {
-
+        logger.info("Closed connection: {}", webSocket.getRemoteSocketAddress());
+        for (String notecardId : clients.keySet()) {
+            clients.get(notecardId).removeIf(client -> client.getWebSocket().equals(webSocket));
+        }
     }
 
     private final ObjectMapper mapper = new ObjectMapper();
@@ -119,6 +139,8 @@ public class WebsocketServer extends WebSocketServer {
     public void onMessage(WebSocket webSocket, String message) {
         try {
             JsonNode jsonNode = mapper.readTree(message);
+
+            logger.info("Received message: {}", jsonNode);
 
             switch (jsonNode.get("type").asText()) {
                 case "register" -> {
@@ -145,14 +167,27 @@ public class WebsocketServer extends WebSocketServer {
                     String notecardId = jsonNode.get("notecardId").asText();
                     String content = jsonNode.get("content").asText();
                     String action = jsonNode.get("action").asText();
+                    int version = jsonNode.get("version").asInt();
 
                     if (pendingUpdates.containsKey(notecardId)) {
-                        pendingUpdates.get(notecardId).add(new TextChange(content, action));
+                        List<TextChange> pendingUpdatesList = pendingUpdates.get(notecardId);
+                        for (int i = 0; i < pendingUpdatesList.size(); i++) {
+                            TextChange pendingUpdate = pendingUpdatesList.get(i);
+                            if (pendingUpdate.getVersion() > version) {
+                                break;
+                            }
+                            if (i == pendingUpdatesList.size() - 1) {
+                                pendingUpdate.setText(content);
+                                pendingUpdate.setAction(action);
+                                pendingUpdate.setVersion(version + 1);
+                                pendingUpdatesList.set(i, pendingUpdate);
+                            }
+                        }
                     } else {
-                        pendingUpdates.put(notecardId, List.of(new TextChange(content, action)));
+                        pendingUpdates.put(notecardId, List.of(new TextChange(content, action, version + 1)));
                     }
 
-                    webSocket.send("Update received");
+                    webSocket.send(mapper.writeValueAsString(new TextChange(content, action, version + 1)));
                 }
             }
         } catch (JsonProcessingException e) {
