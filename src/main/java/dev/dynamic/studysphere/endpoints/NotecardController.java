@@ -7,6 +7,7 @@ import dev.dynamic.studysphere.model.*;
 import dev.dynamic.studysphere.model.request.*;
 import dev.dynamic.studysphere.model.response.CreateNotecardResponse;
 import dev.dynamic.studysphere.model.response.GetNotecardsResponse;
+import dev.dynamic.studysphere.model.response.ShareNotecardResponse;
 import groovy.transform.options.Visibility;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -95,12 +96,36 @@ public class NotecardController {
         }
         User user = userRepository.findByEmail(email).get();
         String notecardId = request.getNotecardId();
-        if (notecardRepository.findById(Long.parseLong(notecardId)).isEmpty()) {
+
+        if (notecardRepository.findById(UUID.fromString(notecardId)).isEmpty()) {
             return ResponseEntity.status(404).body("Notecard not found");
         }
-        Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).get();
+
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).get();
         user.getFavoriteNotecards().add(notecard);
+
+        userRepository.save(user);
         return ResponseEntity.ok("Notecard added to favorites");
+    }
+
+    @PostMapping(value = "/unfavorite", consumes = "application/json", produces = "application/json")
+    public ResponseEntity unfavoriteNotecard(@RequestBody FavoriteNotecardRequest request) {
+        String email = jwtUtil.getEmail(request.getToken());
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        String notecardId = request.getNotecardId();
+
+        if (notecardRepository.findById(UUID.fromString(notecardId)).isEmpty()) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).get();
+        user.getFavoriteNotecards().remove(notecard);
+
+        userRepository.save(user);
+        return ResponseEntity.ok("Notecard removed from favorites");
     }
 
     // List methods
@@ -248,6 +273,52 @@ public class NotecardController {
         Set<NotecardCategory> categories = categoryRepository.findByOwner(user);
         ObjectMapper mapper = new ObjectMapper();
         return ResponseEntity.ok(mapper.writeValueAsString(categories));
+    }
+
+    @GetMapping(value = "/list_shared", produces = "application/json")
+    public ResponseEntity getSharedNotecards(@RequestParam String token) {
+        String email = jwtUtil.getEmail(token);
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        Set<Notecard> notecards = notecardRepository.findByUserRolesUserAndDeletedFalse(user);
+        GetNotecardsResponse response = new GetNotecardsResponse(notecards);
+        return ResponseEntity.ok(response.toString());
+    }
+
+    @PostMapping(value = "/share", consumes = "application/json", produces = "application/json")
+    public ResponseEntity shareNotecard(@RequestBody ShareNotecardRequest request) {
+        String email = jwtUtil.getEmail(request.getToken());
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+
+        User user = userRepository.findByEmail(email).get();
+        User sharedUser = userRepository.findByEmail(request.getEmail()).orElse(null);
+
+        if (sharedUser == null) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        if (notecardRepository.findById(UUID.fromString(request.getNotecardId())).isEmpty()) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+
+        Notecard notecard = notecardRepository.findById(UUID.fromString(request.getNotecardId())).get();
+
+        //TODO: have permissino checks if they are editor or not
+
+        UserNotecardRole userRole = new UserNotecardRole();
+        userRole.setUser(sharedUser);
+        userRole.setRole(NotecardRole.EDITOR);
+        userRole.setNotecard(notecard);
+
+        notecard.getUserRoles().add(userRole);
+        notecardRepository.save(notecard);
+
+        ShareNotecardResponse response = new ShareNotecardResponse(sharedUser.getUsername(), sharedUser.getEmail(), sharedUser.getBase64Avatar());
+        return ResponseEntity.ok(response.toString());
     }
 
     // Allow for Y-JS

@@ -1,12 +1,9 @@
 package dev.dynamic.studysphere.model;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
-import org.checkerframework.checker.units.qual.C;
 
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -48,10 +45,12 @@ public class User {
     @Column
     private int apiQuota = 0;
     @Column
-    private boolean emailVerified = false; //todo
+    private boolean emailVerified = true; //todo
     @Column
     private UUID emailVerificationToken;
-    @Column
-    @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
-    private LocalDateTime emailVerificationTokenExpiration = LocalDateTime.now().plusHours(1);
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
 }
