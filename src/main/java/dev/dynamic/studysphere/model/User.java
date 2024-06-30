@@ -48,4 +48,9 @@ public class User {
     private boolean emailVerified = true; //todo
     @Column
     private UUID emailVerificationToken;
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
 }

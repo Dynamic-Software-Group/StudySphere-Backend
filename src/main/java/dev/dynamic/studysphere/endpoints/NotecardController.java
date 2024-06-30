@@ -95,12 +95,36 @@ public class NotecardController {
         }
         User user = userRepository.findByEmail(email).get();
         String notecardId = request.getNotecardId();
-        if (notecardRepository.findById(Long.parseLong(notecardId)).isEmpty()) {
+
+        if (notecardRepository.findById(UUID.fromString(notecardId)).isEmpty()) {
             return ResponseEntity.status(404).body("Notecard not found");
         }
-        Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).get();
+
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).get();
         user.getFavoriteNotecards().add(notecard);
+
+        userRepository.save(user);
         return ResponseEntity.ok("Notecard added to favorites");
+    }
+
+    @PostMapping(value = "/unfavorite", consumes = "application/json", produces = "application/json")
+    public ResponseEntity unfavoriteNotecard(@RequestBody FavoriteNotecardRequest request) {
+        String email = jwtUtil.getEmail(request.getToken());
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        String notecardId = request.getNotecardId();
+
+        if (notecardRepository.findById(UUID.fromString(notecardId)).isEmpty()) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).get();
+        user.getFavoriteNotecards().remove(notecard);
+
+        userRepository.save(user);
+        return ResponseEntity.ok("Notecard removed from favorites");
     }
 
     // List methods

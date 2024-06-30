@@ -1,5 +1,6 @@
 package dev.dynamic.studysphere.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
@@ -17,5 +18,6 @@ public class NotecardCategory {
     private String name;
     @ManyToOne
     @JoinColumn(name = "owner_id", referencedColumnName = "id")
+    @JsonIgnore
     private User owner;
 }
