@@ -12,6 +12,8 @@ import dev.dynamic.studysphere.model.request.SignupRequest;
 import dev.dynamic.studysphere.model.response.ErrorResponse;
 import dev.dynamic.studysphere.model.response.LoginResponse;
 import jakarta.mail.MessagingException;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,9 +24,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.view.RedirectView;
 
+import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -102,10 +104,13 @@ public class AuthController {
         return ResponseEntity.ok("User created successfully");
     }
 
+    Logger logger = LogManager.getLogger(AuthController.class);
+
     @PostMapping(value = "/request_verify")
     public ResponseEntity requestVerify(@RequestBody EmailVerificationRequest request) throws MessagingException {
-        String email = jwtUtil.getEmail(request.getToken());
+        String email = request.getEmail();
         Optional<User> oUser = userRepository.findByEmail(email);
+
         if (oUser.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(HttpStatus.NOT_FOUND, "User not found"));
         }
@@ -120,15 +125,19 @@ public class AuthController {
         User user = userRepository.findById(String.valueOf(Long.parseLong(userId))).orElse(null);
 
         if (user == null) {
-            return new RedirectView("https://app.studysphere.com/verifyError?error=notFound"); // TODO: update if needed
+            return new RedirectView("http://localhost:3000/verifyError?error=notFound"); // TODO: update if needed
+        }
+
+        if (user.getEmailVerificationTokenExpiration().isBefore(LocalDateTime.now())) {
+            return new RedirectView("http://localhost:3000/verifyError?error=expiredToken");
         }
 
         if (user.getEmailVerificationToken().toString().equals(token)) {
             user.setEmailVerified(true);
             userRepository.save(user);
-            return new RedirectView("https://app.studysphere.com/verifySuccess");
+            return new RedirectView("http://localhost:3000/verifySuccess");
         }
 
-        return new RedirectView("https://app.studysphere.com/verifyError?error=invalidToken");
+        return new RedirectView("http://localhost:3000/verifyError?error=invalidToken");
     }
 }
