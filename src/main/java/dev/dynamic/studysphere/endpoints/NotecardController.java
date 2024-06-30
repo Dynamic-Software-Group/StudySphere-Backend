@@ -1,5 +1,7 @@
 package dev.dynamic.studysphere.endpoints;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.dynamic.studysphere.auth.JwtUtil;
 import dev.dynamic.studysphere.model.*;
 import dev.dynamic.studysphere.model.request.*;
@@ -208,7 +210,22 @@ public class NotecardController {
         category.setName(request.getName());
         category.setOwner(user);
         categoryRepository.save(category);
+
         return ResponseEntity.ok("Category created");
+    }
+
+    @GetMapping(value = "/list_categories", produces = "application/json")
+    public ResponseEntity getCategories(@RequestParam String token) throws JsonProcessingException {
+        String email = jwtUtil.getEmail(token);
+
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+
+        User user = userRepository.findByEmail(email).get();
+        Set<NotecardCategory> categories = categoryRepository.findByOwner(user);
+        ObjectMapper mapper = new ObjectMapper();
+        return ResponseEntity.ok(mapper.writeValueAsString(categories));
     }
 
     // Allow for Y-JS

@@ -31,7 +31,7 @@ public class Notecard {
     @Column
     @CreatedDate
     private LocalDateTime created;
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User owner;
     @ManyToMany
