@@ -102,11 +102,11 @@ public class WebsocketService extends WebSocketServer {
             return;
         }
 
-        if (!notecard.getOwner().getEmail().equals(email) ||
-                notecard.getUserRoles().stream().noneMatch(userRole -> userRole.getUser().getEmail().equals(email) && userRole.getRole().equals(NotecardRole.EDITOR))) {
-            logger.error(STR."Unauthorized access attempt.");
-            return;
-        }
+//        if (!notecard.getOwner().getEmail().equals(email) ||
+//                notecard.getUserRoles().stream().noneMatch(userRole -> userRole.getUser().getEmail().equals(email) && userRole.getRole().equals(NotecardRole.EDITOR))) {
+//            logger.error(STR."Unauthorized access attempt.");
+//            return;
+//        }
 
         notecard.setContent(jsonNode.get("content").asText());
         batchInsertService.addToBatch(notecard);
