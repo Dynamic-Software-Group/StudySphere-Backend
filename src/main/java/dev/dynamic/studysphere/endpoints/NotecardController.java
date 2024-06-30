@@ -12,7 +12,6 @@ import dev.dynamic.studysphere.model.response.CreateNotecardResponse;
 import dev.dynamic.studysphere.model.response.GetNotecardsResponse;
 import dev.dynamic.studysphere.model.response.ShareNotecardResponse;
 import groovy.transform.options.Visibility;
-import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
@@ -27,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/notecard")
@@ -43,6 +43,9 @@ public class NotecardController {
 
     @Autowired
     private NotecardRepository notecardRepository;
+
+    @Autowired
+    private NotecardUserRoleRepository notecardUserRoleRepository;
 
     private final OpenAiChatModel chatModel;
 
@@ -313,6 +316,10 @@ public class NotecardController {
 
         Notecard notecard = notecardRepository.findById(UUID.fromString(request.getNotecardId())).get();
 
+        if (notecard.getUserRoles().stream().anyMatch(userNotecardRole -> userNotecardRole.getUser().getEmail().equals(sharedUser.getEmail()))) {
+            return ResponseEntity.status(409).body("User already has access to notecard");
+        }
+
         //TODO: have permissino checks if they are editor or not
 
         UserNotecardRole userRole = new UserNotecardRole();
@@ -320,11 +327,33 @@ public class NotecardController {
         userRole.setRole(NotecardRole.EDITOR);
         userRole.setNotecard(notecard);
 
+        notecardUserRoleRepository.save(userRole);
+
         notecard.getUserRoles().add(userRole);
         notecardRepository.save(notecard);
 
         ShareNotecardResponse response = new ShareNotecardResponse(sharedUser.getUsername(), sharedUser.getEmail(), sharedUser.getBase64Avatar());
         return ResponseEntity.ok(response.toString());
+    }
+
+    @GetMapping(value = "/collaborators", produces = "application/json")
+    public ResponseEntity getCollaborators(@RequestParam String token, @RequestParam String notecardId) {
+        String email = jwtUtil.getEmail(token);
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        if (notecardRepository.findById(UUID.fromString(notecardId)).isEmpty()) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).get();
+        if (!notecard.getOwner().equals(user)) {
+            return ResponseEntity.status(401).body("Notecard not owned by user");
+        }
+        Set<UserNotecardRole> userRoles = notecard.getUserRoles();
+        Set<ShareNotecardResponse> response = userRoles.stream().map(userNotecardRole -> new ShareNotecardResponse(userNotecardRole.getUser().getUsername(), userNotecardRole.getUser().getEmail(), userNotecardRole.getUser().getBase64Avatar())).collect(Collectors.toSet());
+
+        return ResponseEntity.ok(response);
     }
 
     // Allow for Y-JS
