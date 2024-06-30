@@ -27,6 +27,9 @@ public class WebsocketService extends WebSocketServer {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private BatchInsertService batchInsertService;
+
     private final Logger logger = LogManager.getLogger(WebsocketService.class);
 
     public WebsocketService() {
@@ -77,6 +80,7 @@ public class WebsocketService extends WebSocketServer {
     }
 
     ObjectMapper objectMapper = new ObjectMapper();
+
     @Override
     public void onMessage(WebSocket webSocket, String s) {
         JsonNode jsonNode;
@@ -105,7 +109,7 @@ public class WebsocketService extends WebSocketServer {
         }
 
         notecard.setContent(jsonNode.get("content").asText());
-        notecardRepository.save(notecard);
+        batchInsertService.addToBatch(notecard);
     }
 
     @Override
