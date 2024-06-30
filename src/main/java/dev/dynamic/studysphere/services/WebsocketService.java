@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.dynamic.studysphere.auth.JwtUtil;
 import dev.dynamic.studysphere.model.Notecard;
 import dev.dynamic.studysphere.model.NotecardRepository;
-import dev.dynamic.studysphere.model.NotecardRole;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.java_websocket.WebSocket;
@@ -108,7 +107,12 @@ public class WebsocketService extends WebSocketServer {
 //            return;
 //        }
 
-        notecard.setContent(jsonNode.get("content").asText());
+        JsonNode dataNode = jsonNode.get("data");
+
+        for (JsonNode node : dataNode) {
+            notecard.setContent(node.toString());
+        }
+
         batchInsertService.addToBatch(notecard);
     }
 
