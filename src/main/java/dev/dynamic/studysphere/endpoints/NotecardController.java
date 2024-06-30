@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/notecard")
@@ -251,14 +252,14 @@ public class NotecardController {
         return ResponseEntity.ok("Notecard content updated");
     }
 
-    @GetMapping(value = "/get", consumes = "application/json", produces = "application/json")
-    public ResponseEntity getNotecard(@RequestBody GetNotecardRequest request) {
-        if (notecardRepository.findById(request.getId()).isEmpty()) {
+    @GetMapping(value = "/get", produces = "application/json")
+    public ResponseEntity getNotecard(@RequestParam String token, @RequestParam String notecardId) {
+        if (notecardRepository.findById(UUID.fromString(notecardId)).isEmpty()) {
             return ResponseEntity.status(404).body("Notecard not found");
         }
 
-        Notecard notecard = notecardRepository.findById(request.getId()).get();
-        if (!notecard.getOwner().getEmail().equals(jwtUtil.getEmail(request.getToken()))) {
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).get();
+        if (!notecard.getOwner().getEmail().equals(jwtUtil.getEmail(token))) {
             return ResponseEntity.status(401).body("Notecard not owned by user");
         }
 
