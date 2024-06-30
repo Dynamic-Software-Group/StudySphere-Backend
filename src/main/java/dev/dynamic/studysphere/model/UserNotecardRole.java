@@ -24,8 +24,4 @@ public class UserNotecardRole {
     @Column
     @Enumerated(EnumType.STRING)
     private NotecardRole role;
-
-    @Column
-    @Enumerated(EnumType.STRING)
-    private NotecardVisibility visibility;
 }
