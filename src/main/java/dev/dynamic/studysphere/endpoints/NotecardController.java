@@ -368,7 +368,7 @@ public class NotecardController {
         notecard.getUserRoles().add(userRole);
         notecardRepository.save(notecard);
 
-        ShareNotecardResponse response = new ShareNotecardResponse(sharedUser.getUsername(), sharedUser.getEmail(), sharedUser.getBase64Avatar());
+        ShareNotecardResponse response = new ShareNotecardResponse(sharedUser.getUsername(), sharedUser.getEmail());
         return ResponseEntity.ok(response.toString());
     }
 
@@ -387,7 +387,7 @@ public class NotecardController {
             return ResponseEntity.status(401).body("Notecard not owned by user");
         }
         Set<UserNotecardRole> userRoles = notecard.getUserRoles();
-        Set<ShareNotecardResponse> response = userRoles.stream().map(userNotecardRole -> new ShareNotecardResponse(userNotecardRole.getUser().getUsername(), userNotecardRole.getUser().getEmail(), userNotecardRole.getUser().getBase64Avatar())).collect(Collectors.toSet());
+        Set<ShareNotecardResponse> response = userRoles.stream().map(userNotecardRole -> new ShareNotecardResponse(userNotecardRole.getUser().getUsername(), userNotecardRole.getUser().getEmail())).collect(Collectors.toSet());
 
         return ResponseEntity.ok(response);
     }
