@@ -1,7 +1,11 @@
 package dev.dynamic.studysphere.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.dynamic.studysphere.auth.JwtUtil;
+import dev.dynamic.studysphere.model.Notecard;
 import dev.dynamic.studysphere.model.NotecardRepository;
+import dev.dynamic.studysphere.model.NotecardRole;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.java_websocket.WebSocket;
@@ -10,11 +14,9 @@ import org.java_websocket.server.WebSocketServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class WebsocketService extends WebSocketServer {
@@ -74,10 +76,36 @@ public class WebsocketService extends WebSocketServer {
         logger.info(STR."Connection closed: \{i}");
     }
 
+    ObjectMapper objectMapper = new ObjectMapper();
     @Override
     public void onMessage(WebSocket webSocket, String s) {
-        logger.info(STR."Message received: \{s}");
+        JsonNode jsonNode;
+        try {
+            jsonNode = objectMapper.readTree(s);
+        } catch (Exception e) {
+            logger.error(STR."Failed to parse JSON: \{e.getMessage()}");
+            return;
+        }
 
+        String token = jsonNode.get("token").asText();
+        String email = jwtUtil.getEmail(token);
+        String notecardId = jsonNode.get("notecardId").asText();
+
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).orElse(null);
+
+        if (notecard == null) {
+            logger.error(STR."Notecard not found.");
+            return;
+        }
+
+        if (!notecard.getOwner().getEmail().equals(email) ||
+                notecard.getUserRoles().stream().noneMatch(userRole -> userRole.getUser().getEmail().equals(email) && userRole.getRole().equals(NotecardRole.EDITOR))) {
+            logger.error(STR."Unauthorized access attempt.");
+            return;
+        }
+
+        notecard.setContent(jsonNode.get("content").asText());
+        notecardRepository.save(notecard);
     }
 
     @Override
