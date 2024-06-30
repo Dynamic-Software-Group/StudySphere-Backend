@@ -13,9 +13,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Data
@@ -61,6 +59,10 @@ public class Notecard {
     @Column
     @Enumerated(EnumType.STRING)
     private NotecardVisibility visibility = NotecardVisibility.PRIVATE;
+    @ElementCollection
+    @CollectionTable(name = "notecard_past_summaries", joinColumns = @JoinColumn(name = "notecard_id"))
+    @Column(name = "summary")
+    private List<String> pastSummaries = new ArrayList<>();
 
     @Override
     public String toString() {

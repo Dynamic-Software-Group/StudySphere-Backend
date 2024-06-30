@@ -1,7 +1,10 @@
 package dev.dynamic.studysphere.endpoints;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.gson.JsonObject;
 import dev.dynamic.studysphere.auth.JwtUtil;
 import dev.dynamic.studysphere.model.*;
 import dev.dynamic.studysphere.model.request.*;
@@ -15,11 +18,13 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -361,21 +366,26 @@ public class NotecardController {
 
     // Summarize
 
+    ObjectMapper objectMapper = new ObjectMapper();
+
     // Require notecard contents because normal content is encoded in YJS format
     @GetMapping("/summarize")
-    public ResponseEntity summarize(@RequestParam String token, @RequestParam String notecardContents) {
+    public ResponseEntity summarize(@RequestParam String token, @RequestParam String notecardContents, @RequestParam String notecardId) {
         String email = jwtUtil.getEmail(token);
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
         User user = userRepository.findByEmail(email).get();
 
+        Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).orElse(null);
+
+        if (notecard == null) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+
         if (user.getApiQuota() > 5) {
             return ResponseEntity.status(429).body("API quota exceeded");
         }
-
-        user.setApiQuota(user.getApiQuota() + 1);
-        userRepository.save(user);
 
         String prompt = STR."""
         Please summarize the following notecard in a concise paragraph, focusing on the main ideas related to the notecard. Highlight the key points and ensure the summary is easy to understand. Here is the content you need to summarize:\s
@@ -383,9 +393,58 @@ public class NotecardController {
 
         WebClient client = WebClient.create();
 
+        String response = client.post()
+                .uri("https://api.openai.com/v1/moderations")
+                .header("Authorization", "Bearer " + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(STR."{\"input\": \"\{prompt}\"}")
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
 
-        String response = chatModel.call();
-        return ResponseEntity.ok(response);
+        JsonNode jsonNode;
+        boolean isFlagged = false;
+        try {
+            jsonNode = objectMapper.readTree(response);
+            JsonNode results = jsonNode.get("results");
+            if (results.isArray()) {
+                JsonNode firstResult = results.get(0);
+                isFlagged = firstResult.get("flagged").asBoolean();
+            }
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("Internal server error");
+        }
+
+        if (isFlagged) {
+            return ResponseEntity.status(403).body("Content flagged");
+        }
+
+        String summary = chatModel.call(prompt);
+
+        notecard.getPastSummaries().add(summary);
+
+        user.setApiQuota(user.getApiQuota() + 1);
+        userRepository.save(user);
+
+        return ResponseEntity.ok(summary);
+    }
+
+    @GetMapping("/summaries")
+    public ResponseEntity getSummaries(@RequestParam String token, @RequestParam String notecardId) {
+        String email = jwtUtil.getEmail(token);
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).orElse(null);
+        if (notecard == null) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+        if (!canAccess(notecard, user)) {
+            return ResponseEntity.status(401).body("No permission");
+        }
+        return ResponseEntity.ok(notecard.getPastSummaries()); // Client should only have like 5 of them handled, or that is a lot of summaries!
     }
 
     @GetMapping("/access")
@@ -422,6 +481,10 @@ public class NotecardController {
         }
         UserNotecardRole userRole = notecard.getUserRoles().stream().filter(userNotecardRole -> userNotecardRole.getUser().equals(user)).findFirst().orElse(null);
         return ResponseEntity.ok(userRole.getRole());
+    }
+
+    private boolean canAccess(Notecard notecard, User user) {
+        return notecard.getOwner().equals(user) || notecard.getUserRoles().stream().anyMatch(userNotecardRole -> userNotecardRole.getUser().equals(user)) || notecard.getVisibility().equals(Visibility.PUBLIC);
     }
 
 }
