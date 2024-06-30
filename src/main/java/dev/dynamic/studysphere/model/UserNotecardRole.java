@@ -24,4 +24,9 @@ public class UserNotecardRole {
     @Column
     @Enumerated(EnumType.STRING)
     private NotecardRole role;
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
 }
