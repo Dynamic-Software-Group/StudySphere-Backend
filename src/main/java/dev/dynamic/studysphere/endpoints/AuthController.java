@@ -56,6 +56,10 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(HttpStatus.UNAUTHORIZED, "User not found"));
             }
 
+            if (!optionalUser.get().isEmailVerified()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(HttpStatus.UNAUTHORIZED, "Email not verified"));
+            }
+
             User user = optionalUser.get();
             String token = jwtUtil.createToken(user);
             LoginResponse loginResponse = new LoginResponse(user.getEmail(), token);

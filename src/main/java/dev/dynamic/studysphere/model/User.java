@@ -6,6 +6,7 @@ import lombok.Getter;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Data
 @Entity
@@ -23,6 +24,7 @@ public class User {
     @Column
     private String email;
     @Column
+    @Enumerated(EnumType.STRING)
     private Role role;
     @ManyToMany
     @JoinTable(
@@ -42,4 +44,8 @@ public class User {
     private String base64Avatar;
     @Column
     private int apiQuota = 0;
+    @Column
+    private boolean emailVerified = false;
+    @Column
+    private UUID emailVerificationToken;
 }

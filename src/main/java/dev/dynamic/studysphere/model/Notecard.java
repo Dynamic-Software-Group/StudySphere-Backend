@@ -31,16 +31,16 @@ public class Notecard {
     @Column
     @CreatedDate
     private LocalDateTime created;
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User owner;
-    @ManyToMany
+    @OneToMany
     @JoinTable(
-            name = "notecard_collaborators",
+            name = "notecard_user_roles",
             joinColumns = @JoinColumn(name = "notecard_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<User> collaborators = new HashSet<>();
+    private Set<UserNotecardRole> userRoles = new HashSet<>();
     @Column
     private String content;
     @ManyToOne
@@ -50,6 +50,9 @@ public class Notecard {
     private boolean deleted = false;
     @Column
     private LocalDateTime scheduledDeletionTime;
+    @Column
+    @Enumerated(EnumType.STRING)
+    private NotecardVisibility visibility = NotecardVisibility.PRIVATE;
 
     @Override
     public String toString() {

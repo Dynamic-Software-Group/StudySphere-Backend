@@ -5,6 +5,7 @@ import dev.dynamic.studysphere.model.*;
 import dev.dynamic.studysphere.model.request.*;
 import dev.dynamic.studysphere.model.response.CreateNotecardResponse;
 import dev.dynamic.studysphere.model.response.GetNotecardsResponse;
+import groovy.transform.options.Visibility;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
@@ -290,6 +291,42 @@ public class NotecardController {
         Please summarize the following notecard in a concise paragraph, focusing on the main ideas related to the notecard. Highlight the key points and ensure the summary is easy to understand. Here is the content you need to summarize:\s
         \{notecardContents}""");
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/access")
+    public ResponseEntity access(@RequestParam String token, @RequestParam String notecardId) {
+        String email = jwtUtil.getEmail(token);
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        if (notecardRepository.findById(Long.parseLong(notecardId)).isEmpty()) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+        Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).get();
+        boolean access = notecard.getOwner().equals(user) || notecard.getUserRoles().stream().anyMatch(userNotecardRole -> userNotecardRole.getUser().equals(user)) || notecard.getVisibility().equals(Visibility.PUBLIC);
+        return ResponseEntity.ok(access);
+    }
+
+    @GetMapping("/permissions")
+    public ResponseEntity permissions(@RequestParam String token, @RequestParam String notecardId) {
+        String email = jwtUtil.getEmail(token);
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        if (notecardRepository.findById(Long.parseLong(notecardId)).isEmpty()) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+        if (user.getRole().equals(Role.ADMIN)) {
+            return ResponseEntity.ok(NotecardRole.OWNER);
+        }
+        Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).get();
+        if (notecard.getOwner().equals(user)) {
+            return ResponseEntity.ok(NotecardRole.OWNER);
+        }
+        UserNotecardRole userRole = notecard.getUserRoles().stream().filter(userNotecardRole -> userNotecardRole.getUser().equals(user)).findFirst().orElse(null);
+        return ResponseEntity.ok(userRole.getRole());
     }
 
 }
