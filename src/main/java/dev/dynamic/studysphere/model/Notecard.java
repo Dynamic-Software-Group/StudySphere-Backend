@@ -23,6 +23,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @Table(name = "notecards")
+@JsonSerialize(using = CustomLocalDateTimeSerializer.class)
 @EntityListeners(AuditingEntityListener.class)
 public class Notecard {
     @Id
@@ -30,24 +31,28 @@ public class Notecard {
     private UUID id;
     @Column
     private String name;
+    @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
     @Column
     @LastModifiedDate
     @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
     private LocalDateTime lastModified;
+    @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
     @Column
     @CreatedDate
     @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
     private LocalDateTime created;
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User owner;
-    @ManyToMany
+    @JsonIgnore
+    @OneToMany
     @JoinTable(
-            name = "notecard_collaborators",
+            name = "notecard_user_roles",
             joinColumns = @JoinColumn(name = "notecard_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<User> collaborators = new HashSet<>();
+    private Set<UserNotecardRole> userRoles = new HashSet<>();
     @Column
     private String content;
     @ManyToOne
@@ -57,6 +62,9 @@ public class Notecard {
     private boolean deleted = false;
     @Column
     private LocalDateTime scheduledDeletionTime;
+    @Column
+    @Enumerated(EnumType.STRING)
+    private NotecardVisibility visibility = NotecardVisibility.PRIVATE;
 
     @Override
     public String toString() {

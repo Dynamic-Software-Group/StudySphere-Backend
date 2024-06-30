@@ -82,11 +82,11 @@ public class WebsocketService extends WebSocketServer {
 
     @Override
     public void onError(WebSocket webSocket, Exception e) {
-
+        logger.error("An error occurred.", e);
     }
 
     @Override
     public void onStart() {
-
+        logger.info("Websocket server started.");
     }
 }

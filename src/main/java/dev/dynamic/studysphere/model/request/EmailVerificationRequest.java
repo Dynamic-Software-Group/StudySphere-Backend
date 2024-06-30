@@ -5,6 +5,6 @@ import lombok.Getter;
 
 @Data
 @Getter
-public class CheckRequest {
+public class EmailVerificationRequest {
     private String token;
 }

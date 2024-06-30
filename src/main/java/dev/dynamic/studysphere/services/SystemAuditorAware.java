@@ -10,6 +10,6 @@ public class SystemAuditorAware implements AuditorAware<String> {
 
     @Override
     public Optional<String> getCurrentAuditor() {
-        return Optional.of("system");
+        return Optional.of("System");
     }
 }
