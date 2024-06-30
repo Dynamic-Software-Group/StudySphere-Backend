@@ -42,7 +42,7 @@ public class Notecard {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User owner;
     @JsonIgnore
-    @OneToMany
+    @OneToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "notecard_user_roles",
             joinColumns = @JoinColumn(name = "notecard_id"),
