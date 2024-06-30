@@ -13,8 +13,11 @@ import java.util.UUID;
 @Service
 public class MailSender {
 
-    @Autowired
-    private JavaMailSender javaMailSender;
+    private final JavaMailSender javaMailSender;
+
+    public MailSender(JavaMailSender javaMailSender) {
+        this.javaMailSender = javaMailSender;
+    }
 
     public void sendVerificationEmail(User user) throws MessagingException {
         UUID token = generateVerificationToken();

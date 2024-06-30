@@ -26,14 +26,14 @@ public class User {
     @Column
     @Enumerated(EnumType.STRING)
     private Role role;
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "favorite_notecards",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "notecard_id")
     )
     private Set<Notecard> favoriteNotecards = new HashSet<>();
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_categories",
             joinColumns = @JoinColumn(name = "user_id"),
@@ -45,7 +45,7 @@ public class User {
     @Column
     private int apiQuota = 0;
     @Column
-    private boolean emailVerified = false;
+    private boolean emailVerified = true; //todo
     @Column
     private UUID emailVerificationToken;
 }

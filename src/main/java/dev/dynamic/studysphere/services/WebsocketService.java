@@ -79,6 +79,7 @@ public class WebsocketService extends WebSocketServer {
     ObjectMapper objectMapper = new ObjectMapper();
     @Override
     public void onMessage(WebSocket webSocket, String s) {
+        logger.info(STR."Received message: \{s}");
         JsonNode jsonNode;
         try {
             jsonNode = objectMapper.readTree(s);
@@ -98,13 +99,17 @@ public class WebsocketService extends WebSocketServer {
             return;
         }
 
-        if (!notecard.getOwner().getEmail().equals(email) ||
-                notecard.getUserRoles().stream().noneMatch(userRole -> userRole.getUser().getEmail().equals(email) && userRole.getRole().equals(NotecardRole.EDITOR))) {
-            logger.error(STR."Unauthorized access attempt.");
-            return;
-        }
+//        if (!notecard.getOwner().getEmail().equals(email) ||
+//                notecard.getUserRoles().stream().noneMatch(userRole -> userRole.getUser().getEmail().equals(email) && userRole.getRole().equals(NotecardRole.EDITOR))) {
+//            logger.error(STR."Unauthorized access attempt.");
+//            return;
+//        }
 
-        notecard.setContent(jsonNode.get("content").asText());
+        notecard.setContent(jsonNode.get("data").asText());
+
+        logger.info(STR."Saving notecard.");
+        logger.info(jsonNode.get("data").asText());
+        logger.info(notecard.toString());
         notecardRepository.save(notecard);
     }
 
