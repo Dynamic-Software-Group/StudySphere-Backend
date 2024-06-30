@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -376,9 +377,14 @@ public class NotecardController {
         user.setApiQuota(user.getApiQuota() + 1);
         userRepository.save(user);
 
-        String response = chatModel.call(STR."""
+        String prompt = STR."""
         Please summarize the following notecard in a concise paragraph, focusing on the main ideas related to the notecard. Highlight the key points and ensure the summary is easy to understand. Here is the content you need to summarize:\s
-        \{notecardContents}""");
+        \{notecardContents}""";
+
+        WebClient client = WebClient.create();
+
+
+        String response = chatModel.call();
         return ResponseEntity.ok(response);
     }
 
