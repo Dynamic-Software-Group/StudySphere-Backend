@@ -36,7 +36,7 @@ public class MailSender {
 
     // Junky email template below
     private String buildVerificationEmail(User user, UUID token) {
-        String verificationLink = "http://localhost:8080/auth/verify?user=" + user.getId() + "&token=" + token;
+        String verificationLink = "http://localhost:8080/api/v1/auth/verify?user=" + user.getId() + "&token=" + token;
         String html = """
                 <!doctype html>
                 <html>
