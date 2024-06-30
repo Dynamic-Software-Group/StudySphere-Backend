@@ -207,10 +207,10 @@ public class NotecardController {
             return ResponseEntity.status(401).body("User not found");
         }
         User user = userRepository.findByEmail(email).get();
-        if (notecardRepository.findById(Long.parseLong(notecardId)).isEmpty()) {
+        if (notecardRepository.findById(UUID.fromString(notecardId)).isEmpty()) {
             return ResponseEntity.status(404).body("Notecard not found");
         }
-        Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).get();
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).get();
         if (!notecard.getOwner().equals(user)) {
             return ResponseEntity.status(401).body("Notecard not owned by user");
         }
