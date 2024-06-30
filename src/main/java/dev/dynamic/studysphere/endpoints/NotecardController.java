@@ -1,5 +1,7 @@
 package dev.dynamic.studysphere.endpoints;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.dynamic.studysphere.auth.JwtUtil;
 import dev.dynamic.studysphere.model.*;
 import dev.dynamic.studysphere.model.request.*;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/notecard")
@@ -229,7 +232,22 @@ public class NotecardController {
         category.setName(request.getName());
         category.setOwner(user);
         categoryRepository.save(category);
+
         return ResponseEntity.ok("Category created");
+    }
+
+    @GetMapping(value = "/list_categories", produces = "application/json")
+    public ResponseEntity getCategories(@RequestParam String token) throws JsonProcessingException {
+        String email = jwtUtil.getEmail(token);
+
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+
+        User user = userRepository.findByEmail(email).get();
+        Set<NotecardCategory> categories = categoryRepository.findByOwner(user);
+        ObjectMapper mapper = new ObjectMapper();
+        return ResponseEntity.ok(mapper.writeValueAsString(categories));
     }
 
     // Allow for Y-JS
@@ -255,14 +273,14 @@ public class NotecardController {
         return ResponseEntity.ok("Notecard content updated");
     }
 
-    @GetMapping(value = "/get", consumes = "application/json", produces = "application/json")
-    public ResponseEntity getNotecard(@RequestBody GetNotecardRequest request) {
-        if (notecardRepository.findById(request.getId()).isEmpty()) {
+    @GetMapping(value = "/get", produces = "application/json")
+    public ResponseEntity getNotecard(@RequestParam String token, @RequestParam String notecardId) {
+        if (notecardRepository.findById(UUID.fromString(notecardId)).isEmpty()) {
             return ResponseEntity.status(404).body("Notecard not found");
         }
 
-        Notecard notecard = notecardRepository.findById(request.getId()).get();
-        if (!notecard.getOwner().getEmail().equals(jwtUtil.getEmail(request.getToken()))) {
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).get();
+        if (!notecard.getOwner().getEmail().equals(jwtUtil.getEmail(token))) {
             return ResponseEntity.status(401).body("Notecard not owned by user");
         }
 

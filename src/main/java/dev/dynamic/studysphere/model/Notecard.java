@@ -3,6 +3,7 @@ package dev.dynamic.studysphere.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
@@ -33,10 +34,12 @@ public class Notecard {
     @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
     @Column
     @LastModifiedDate
+    @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
     private LocalDateTime lastModified;
     @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
     @Column
     @CreatedDate
+    @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
     private LocalDateTime created;
     @JsonIgnore
     @ManyToOne
@@ -66,6 +69,10 @@ public class Notecard {
     @Override
     public String toString() {
         ObjectMapper objectMapper = new ObjectMapper();
+        SimpleModule module = new SimpleModule();
+        module.addSerializer(LocalDateTime.class, new CustomLocalDateTimeSerializer());
+        objectMapper.registerModule(module);
+
         try {
             return objectMapper.writeValueAsString(this);
         } catch (Exception e) {
