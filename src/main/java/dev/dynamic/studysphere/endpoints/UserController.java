@@ -6,10 +6,7 @@ import dev.dynamic.studysphere.model.UserRepository;
 import lombok.Data;
 import lombok.Getter;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -44,6 +41,19 @@ public class UserController {
         userRepository.save(user);
 
         return ResponseEntity.ok().body("User updated successfully");
+    }
+
+    @GetMapping(path = "/get", produces = "application/json")
+    public ResponseEntity getUser(@RequestParam String token) {
+        String email = jwtUtil.getEmail(token);
+
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.badRequest().body("User not found");
+        }
+
+        User user = userRepository.findByEmail(email).get();
+
+        return ResponseEntity.ok().body(user.toString());
     }
 
     @Data
