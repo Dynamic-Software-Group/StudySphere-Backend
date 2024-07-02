@@ -12,6 +12,10 @@ import dev.dynamic.studysphere.model.response.CreateNotecardResponse;
 import dev.dynamic.studysphere.model.response.GetNotecardsResponse;
 import dev.dynamic.studysphere.model.response.ShareNotecardResponse;
 import groovy.transform.options.Visibility;
+import lombok.Data;
+import lombok.Getter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
@@ -397,16 +401,18 @@ public class NotecardController {
 
     ObjectMapper objectMapper = new ObjectMapper();
 
+    Logger logger = LogManager.getLogger(NotecardController.class);
+
     // Require notecard contents because normal content is encoded in YJS format
-    @GetMapping("/summarize")
-    public ResponseEntity summarize(@RequestParam String token, @RequestParam String notecardContents, @RequestParam String notecardId) {
-        String email = jwtUtil.getEmail(token);
+    @PostMapping("/summarize")
+    public ResponseEntity summarize(@RequestBody SummarizeRequest request) {
+        String email = jwtUtil.getEmail(request.getToken());
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
         User user = userRepository.findByEmail(email).get();
 
-        Notecard notecard = notecardRepository.findById(Long.parseLong(notecardId)).orElse(null);
+        Notecard notecard = notecardRepository.findById(UUID.fromString(request.getNotecardId())).orElse(null);
 
         if (notecard == null) {
             return ResponseEntity.status(404).body("Notecard not found");
@@ -416,47 +422,54 @@ public class NotecardController {
             return ResponseEntity.status(429).body("API quota exceeded");
         }
 
-        String prompt = STR."""
-        Please summarize the following notecard in a concise paragraph, focusing on the main ideas related to the notecard. Highlight the key points and ensure the summary is easy to understand. Here is the content you need to summarize:\s
-        \{notecardContents}""";
-
-        WebClient client = WebClient.create();
-
+        WebClient client = WebClient.create("https://api.openai.com/v1/engines/davinci-codex/completions");
         String response = client.post()
-                .uri("https://api.openai.com/v1/moderations")
+                .uri("https://api.openai.com/v1/chat/completions")
+                .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(STR."{\"input\": \"\{prompt}\"}")
+                .bodyValue(STR."""
+                    {
+                        "model": "gpt-3.5-turbo",
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": "You are a helpful assistant that summarizes notecards."
+                            },
+                            {
+                                "role": "user",
+                                "content": "\{request.getNotecardContents()}"
+                            }
+                        ]
+                    }
+                """)
                 .retrieve()
                 .bodyToMono(String.class)
                 .block();
 
-        JsonNode jsonNode;
-        boolean isFlagged = false;
+        String summary = null;
         try {
-            jsonNode = objectMapper.readTree(response);
-            JsonNode results = jsonNode.get("results");
-            if (results.isArray()) {
-                JsonNode firstResult = results.get(0);
-                isFlagged = firstResult.get("flagged").asBoolean();
-            }
+            JsonNode jsonNode = objectMapper.readTree(response);
+            summary = jsonNode.get("choices").get(0).get("message").get("content").asText();
+            logger.info("Summary: " + summary);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
-            return ResponseEntity.status(500).body("Internal server error");
         }
-
-        if (isFlagged) {
-            return ResponseEntity.status(403).body("Content flagged");
-        }
-
-        String summary = chatModel.call(prompt);
 
         notecard.getPastSummaries().add(summary);
 
         user.setApiQuota(user.getApiQuota() + 1);
         userRepository.save(user);
 
-        return ResponseEntity.ok(summary);
+        String jsonString = String.format("{\"summary\": \"%s\"}", summary);
+        return ResponseEntity.ok(jsonString);
+    }
+
+    @Data
+    @Getter
+    public static class SummarizeRequest {
+        private String token;
+        private String notecardContents;
+        private String notecardId;
     }
 
     @GetMapping("/summaries")

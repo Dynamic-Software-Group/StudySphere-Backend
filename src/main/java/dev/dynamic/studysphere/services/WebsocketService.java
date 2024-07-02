@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.dynamic.studysphere.auth.JwtUtil;
 import dev.dynamic.studysphere.model.Notecard;
 import dev.dynamic.studysphere.model.NotecardRepository;
+import dev.dynamic.studysphere.model.User;
+import dev.dynamic.studysphere.model.UserRepository;
+import groovy.transform.options.Visibility;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.java_websocket.WebSocket;
@@ -25,6 +28,9 @@ public class WebsocketService extends WebSocketServer {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private BatchInsertService batchInsertService;
@@ -90,30 +96,11 @@ public class WebsocketService extends WebSocketServer {
             return;
         }
 
-        String token = jsonNode.get("token").asText();
-        String email = jwtUtil.getEmail(token);
         String notecardId = jsonNode.get("notecardId").asText();
 
-        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).orElse(null);
-
-        if (notecard == null) {
-            logger.error(STR."Notecard not found.");
-            return;
-        }
-
-//        if (!notecard.getOwner().getEmail().equals(email) ||
-//                notecard.getUserRoles().stream().noneMatch(userRole -> userRole.getUser().getEmail().equals(email) && userRole.getRole().equals(NotecardRole.EDITOR))) {
-//            logger.error(STR."Unauthorized access attempt.");
-//            return;
-//        }
-
-        JsonNode dataNode = jsonNode.get("data");
-
-        for (JsonNode node : dataNode) {
-            notecard.setContent(node.toString());
-        }
-
-        batchInsertService.addToBatch(notecard);
+        JsonNode data = jsonNode.get("data");
+        batchInsertService.addToBatch(UUID.fromString(notecardId), data.toString());
+        logger.info("Notecard updated.");
     }
 
     @Override
@@ -125,4 +112,9 @@ public class WebsocketService extends WebSocketServer {
     public void onStart() {
         logger.info("Websocket server started.");
     }
+
+    private boolean canAccess(Notecard notecard, User user) {
+        return notecard.getOwner().equals(user) || notecard.getUserRoles().stream().anyMatch(userNotecardRole -> userNotecardRole.getUser().equals(user)) || notecard.getVisibility().equals(Visibility.PUBLIC);
+    }
+
 }
