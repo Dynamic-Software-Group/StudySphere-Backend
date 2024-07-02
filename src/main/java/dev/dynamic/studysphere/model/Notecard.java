@@ -8,15 +8,12 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
-import org.checkerframework.checker.units.qual.C;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Entity
 @Data
@@ -38,16 +35,18 @@ public class Notecard {
     @CreatedDate
     @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
     private LocalDateTime created;
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User owner;
-    @ManyToMany
+    @JsonIgnore
+    @OneToMany(fetch = FetchType.EAGER)
     @JoinTable(
-            name = "notecard_collaborators",
+            name = "notecard_user_roles",
             joinColumns = @JoinColumn(name = "notecard_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
-    private Set<User> collaborators = new HashSet<>();
+    private Set<UserNotecardRole> userRoles = new HashSet<>();
     @Column
     private String content;
     @ManyToOne
@@ -57,6 +56,13 @@ public class Notecard {
     private boolean deleted = false;
     @Column
     private LocalDateTime scheduledDeletionTime;
+    @Column
+    @Enumerated(EnumType.STRING)
+    private NotecardVisibility visibility = NotecardVisibility.PRIVATE;
+    @ElementCollection
+    @CollectionTable(name = "notecard_past_summaries", joinColumns = @JoinColumn(name = "notecard_id"))
+    @Column(name = "summary")
+    private List<String> pastSummaries = new ArrayList<>();
 
     @Override
     public String toString() {

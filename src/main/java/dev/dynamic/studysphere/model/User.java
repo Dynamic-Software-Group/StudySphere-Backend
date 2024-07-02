@@ -1,11 +1,16 @@
 package dev.dynamic.studysphere.model;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
+import org.checkerframework.checker.units.qual.C;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Data
 @Entity
@@ -23,15 +28,16 @@ public class User {
     @Column
     private String email;
     @Column
+    @Enumerated(EnumType.STRING)
     private Role role;
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "favorite_notecards",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "notecard_id")
     )
     private Set<Notecard> favoriteNotecards = new HashSet<>();
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_categories",
             joinColumns = @JoinColumn(name = "user_id"),
@@ -40,4 +46,28 @@ public class User {
     private Set<NotecardCategory> categories = new HashSet<>();
     @Column
     private String base64Avatar;
+    @Column
+    private int apiQuota = 0;
+    @Column
+    private boolean emailVerified = true; //todo
+    @Column
+    private UUID emailVerificationToken;
+    @Column
+    @JsonSerialize(using = CustomLocalDateTimeSerializer.class)
+    private LocalDateTime emailVerificationTokenExpiration;
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.writeValueAsString(this);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

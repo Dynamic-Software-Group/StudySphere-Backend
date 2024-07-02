@@ -1,6 +1,9 @@
 package dev.dynamic.studysphere.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.dynamic.studysphere.auth.JwtUtil;
+import dev.dynamic.studysphere.model.Notecard;
 import dev.dynamic.studysphere.model.NotecardRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,11 +13,9 @@ import org.java_websocket.server.WebSocketServer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class WebsocketService extends WebSocketServer {
@@ -24,6 +25,9 @@ public class WebsocketService extends WebSocketServer {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private BatchInsertService batchInsertService;
 
     private final Logger logger = LogManager.getLogger(WebsocketService.class);
 
@@ -74,19 +78,51 @@ public class WebsocketService extends WebSocketServer {
         logger.info(STR."Connection closed: \{i}");
     }
 
+    ObjectMapper objectMapper = new ObjectMapper();
+
     @Override
     public void onMessage(WebSocket webSocket, String s) {
-        logger.info(STR."Message received: \{s}");
+        JsonNode jsonNode;
+        try {
+            jsonNode = objectMapper.readTree(s);
+        } catch (Exception e) {
+            logger.error(STR."Failed to parse JSON: \{e.getMessage()}");
+            return;
+        }
 
+        String token = jsonNode.get("token").asText();
+        String email = jwtUtil.getEmail(token);
+        String notecardId = jsonNode.get("notecardId").asText();
+
+        Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).orElse(null);
+
+        if (notecard == null) {
+            logger.error(STR."Notecard not found.");
+            return;
+        }
+
+//        if (!notecard.getOwner().getEmail().equals(email) ||
+//                notecard.getUserRoles().stream().noneMatch(userRole -> userRole.getUser().getEmail().equals(email) && userRole.getRole().equals(NotecardRole.EDITOR))) {
+//            logger.error(STR."Unauthorized access attempt.");
+//            return;
+//        }
+
+        JsonNode dataNode = jsonNode.get("data");
+
+        for (JsonNode node : dataNode) {
+            notecard.setContent(node.toString());
+        }
+
+        batchInsertService.addToBatch(notecard);
     }
 
     @Override
     public void onError(WebSocket webSocket, Exception e) {
-
+        logger.error("An error occurred.", e);
     }
 
     @Override
     public void onStart() {
-
+        logger.info("Websocket server started.");
     }
 }
