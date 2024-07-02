@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Data
 @Getter
-public class LoginRequest {
-    private final String email;
-    private final String password;
+public class FavoriteNotecardRequest {
+    private String notecardId;
+    private String token;
 }

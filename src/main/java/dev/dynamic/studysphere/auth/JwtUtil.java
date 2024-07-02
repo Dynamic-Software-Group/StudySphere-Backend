@@ -5,6 +5,7 @@ import dev.dynamic.studysphere.model.Role;
 import dev.dynamic.studysphere.model.User;
 import io.jsonwebtoken.*;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +14,8 @@ import java.util.Map;
 
 @Component
 public class JwtUtil {
+
+    private final Logger logger = org.slf4j.LoggerFactory.getLogger(JwtUtil.class);
 
     private final String secret = StudysphereApplication.dotenv.get("JWT_SECRET");
     private final long expiration = 1000 * 60 * 60 * 24 * 7;
@@ -85,7 +88,11 @@ public class JwtUtil {
     }
 
     public String getEmail(Claims claims) {
-        return claims.getSubject();
+        return claims.get("email", String.class);
+    }
+
+    public String getEmail(String token) {
+        return getEmail(parseJwtClaims(token));
     }
 
     private Role getRoles(Claims claims) {

@@ -18,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.logging.Logger;
 
@@ -44,12 +45,12 @@ public class AuthController {
             boolean correctPassword = passwordEncoder.passwordEncoder().matches(loginRequest.getPassword(), userRepository.findByEmail(loginRequest.getEmail()).get().getPassword());
 
             if (!correctPassword) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(HttpStatus.UNAUTHORIZED, "bad pass"));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(HttpStatus.UNAUTHORIZED, "Invalid username or bad password"));
             }
 
             Optional<User> optionalUser = userRepository.findByEmail(loginRequest.getEmail());
 
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
 
             if (optionalUser.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(HttpStatus.UNAUTHORIZED, "User not found"));
@@ -59,8 +60,8 @@ public class AuthController {
             String token = jwtUtil.createToken(user);
             LoginResponse loginResponse = new LoginResponse(user.getEmail(), token);
             return ResponseEntity.ok(loginResponse.toString());
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(403).body(new ErrorResponse(HttpStatus.FORBIDDEN, "Invalid username or bad pass"));
+        } catch (BadCredentialsException | NoSuchElementException e) {
+            return ResponseEntity.status(403).body(new ErrorResponse(HttpStatus.FORBIDDEN, "Invalid username or bad password"));
         } catch (Exception e) {
             return ResponseEntity.status(400).body(new ErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage()));
         }
@@ -73,7 +74,7 @@ public class AuthController {
         String password = signupRequest.getPassword();
         String username = signupRequest.getUsername();
         if (userRepository.findByEmail(email).isPresent()) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(HttpStatus.CONFLICT, "User already exists"));
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(HttpStatus.CONFLICT, "Email already exists"));
         }
 
         if (userRepository.findByUsername(username).isPresent()) {

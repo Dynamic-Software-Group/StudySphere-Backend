@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Data
 @Getter
-public class LoginRequest {
-    private final String email;
-    private final String password;
+public class CreateCategoryRequest {
+    private String name;
+    private String token;
 }
