@@ -7,7 +7,6 @@ import lombok.Data;
 public class ShareNotecardResponse {
     private final String name;
     private final String email;
-    private final String base64Pfp;
 
     @Override
     public String toString() {

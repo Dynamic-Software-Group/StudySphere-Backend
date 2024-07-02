@@ -170,6 +170,37 @@ public class NotecardController {
         return ResponseEntity.ok(response.toString());
     }
 
+    @GetMapping(value = "/get_deleted" , produces = "application/json")
+    public ResponseEntity getDeleted(@RequestParam String token) {
+        String email = jwtUtil.getEmail(token);
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        GetNotecardsResponse response = new GetNotecardsResponse(notecardRepository.findByOwnerAndDeletedTrue(user));
+        return ResponseEntity.ok(response.toString());
+    }
+
+    @PostMapping(value = "/restore", consumes = "application/json", produces = "application/json")
+    public ResponseEntity restoreNotecard(@RequestBody RestoreNotecardRequest request) {
+        String email = jwtUtil.getEmail(request.getToken());
+        if (userRepository.findByEmail(email).isEmpty()) {
+            return ResponseEntity.status(401).body("User not found");
+        }
+        User user = userRepository.findByEmail(email).get();
+        if (notecardRepository.findById(UUID.fromString(request.getNotecardId())).isEmpty()) {
+            return ResponseEntity.status(404).body("Notecard not found");
+        }
+        Notecard notecard = notecardRepository.findById(UUID.fromString(request.getNotecardId())).get();
+        if (!notecard.getOwner().equals(user)) {
+            return ResponseEntity.status(401).body("Notecard not owned by user");
+        }
+        notecard.setDeleted(false);
+        notecard.setScheduledDeletionTime(null);
+        notecardRepository.save(notecard);
+        return ResponseEntity.ok("Notecard restored");
+    }
+
     @GetMapping(value = "/favorites", produces = "application/json")
     public ResponseEntity getFavorites(@RequestParam String token) {
         String email = jwtUtil.getEmail(token);
@@ -219,14 +250,19 @@ public class NotecardController {
         if (userRepository.findByEmail(email).isEmpty()) {
             return ResponseEntity.status(401).body("User not found");
         }
+
         User user = userRepository.findByEmail(email).get();
         if (notecardRepository.findById(UUID.fromString(notecardId)).isEmpty()) {
             return ResponseEntity.status(404).body("Notecard not found");
         }
+
         Notecard notecard = notecardRepository.findById(UUID.fromString(notecardId)).get();
         if (!notecard.getOwner().equals(user)) {
             return ResponseEntity.status(401).body("Notecard not owned by user");
         }
+
+        user.getFavoriteNotecards().remove(notecard);
+
         notecard.setDeleted(true);
         notecard.setScheduledDeletionTime(LocalDateTime.now().plusDays(30));
         notecardRepository.save(notecard);
@@ -336,7 +372,7 @@ public class NotecardController {
         notecard.getUserRoles().add(userRole);
         notecardRepository.save(notecard);
 
-        ShareNotecardResponse response = new ShareNotecardResponse(sharedUser.getUsername(), sharedUser.getEmail(), sharedUser.getBase64Avatar());
+        ShareNotecardResponse response = new ShareNotecardResponse(sharedUser.getUsername(), sharedUser.getEmail());
         return ResponseEntity.ok(response.toString());
     }
 
@@ -355,7 +391,7 @@ public class NotecardController {
             return ResponseEntity.status(401).body("Notecard not owned by user");
         }
         Set<UserNotecardRole> userRoles = notecard.getUserRoles();
-        Set<ShareNotecardResponse> response = userRoles.stream().map(userNotecardRole -> new ShareNotecardResponse(userNotecardRole.getUser().getUsername(), userNotecardRole.getUser().getEmail(), userNotecardRole.getUser().getBase64Avatar())).collect(Collectors.toSet());
+        Set<ShareNotecardResponse> response = userRoles.stream().map(userNotecardRole -> new ShareNotecardResponse(userNotecardRole.getUser().getUsername(), userNotecardRole.getUser().getEmail())).collect(Collectors.toSet());
 
         return ResponseEntity.ok(response);
     }

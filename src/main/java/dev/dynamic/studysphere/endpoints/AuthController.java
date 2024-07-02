@@ -140,4 +140,18 @@ public class AuthController {
 
         return new RedirectView("http://localhost:3000/verifyError?error=invalidToken");
     }
+
+    @GetMapping(value = "/check")
+    public ResponseEntity check(@RequestParam String token) {
+        try {
+            String email = jwtUtil.getEmail(token);
+            Optional<User> user = userRepository.findByEmail(email);
+            if (user.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(HttpStatus.NOT_FOUND, "User not found"));
+            }
+            return ResponseEntity.ok("User found");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage()));
+        }
+    }
 }
